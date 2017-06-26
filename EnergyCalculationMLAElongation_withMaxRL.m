@@ -1,167 +1,167 @@
-clear
-clc
-% This is the later version of EnergyCalculationMLAElongation that includes
-% the maximum length of the PF from the full range trials April 2017
-
-direc = '/home/lauren/Desktop/MotionDataAus_April2017/';
-
-list_files = dir([direc '*processed*']);
-
-num_files = length(list_files);
-
-% --------- To reprocess all of the files -----------------------
-ind1 = 1;
-ind2 = 1;
-% root_files = cell(num_files,1);
-for i = 1:num_files
-    subj_num = str2double(list_files(i).name(2:3));
-    subj_str = sprintf('S%.2i',subj_num);
-    rawdatadir = ['/media/lauren/Elements/AustraliaCollection/' subj_str '/SelectedTrials/'];
-    
-    
-    raw_data_files{i} = [rawdatadir list_files(i).name(1:end-20) '.mat'];
-    
-    if isempty(regexp(list_files(i).name(1:end-20),'fullrange')) % normal file
-        root_files{ind1} = [list_files(i).name(1:end-20) '.mat'];
-        ind1 = ind1 + 1;
-    else % full range file
-        root_filesFR{ind2} = [list_files(i).name(1:end-20) '.mat'];
-        ind2 = ind2 + 1;
-    end
-    
-    
-    try % basically I'm too lazy to move all the files over so if it isn't in this direcory, it's in the other one
-        load(raw_data_files{i})
-    catch
-        raw_data_files{i} = ['/media/lauren/Elements/AustraliaCollection/' subj_str '/Mocap/' list_files(i).name(1:end-20) '.mat'];
-    end
-end
-root_files = root_files';
-root_filesFR = root_filesFR';
-% MocapDataTransform(root_files,direc)
-
-% MocapDataTransform(raw_data_files,direc)
-
-clearvars -except root_files num_files direc root_filesFR
-% -----------------------------------------------------------------
-%%
-% load the offsets
-[subject_info,subj_head] = xlsread([direc 'Subject_list.xlsx']);
-close all;
-save_impulse_flag = 0;
-data_structFR = struct('subjects','','weight',[]);
-
-for i = 1:9
-    data_structFR(i).weight = subject_info(i,1);
-end
-
-
-nFRfiles = length(root_filesFR);
-
-
-count = 1; % index for the structure so there is only one row per subject
-% the subjects will be replaced if a different trial for the same subject
-% has a greater maximum pf length
-
-
-% determine all the parameters for the full range trial for scaling
-% purposes
-for i = 1:nFRfiles
-    load([direc root_filesFR{i}(1:end-4) '_processedmotion.mat']);
-    if ~isfield(marker_data,'ME_') || ~isfield(marker_data,'LE_')  || ~isfield(marker_data,'MM_') || ~isfield(marker_data,'LM_')
-        marker_data = addMEandLEtoMarkerData(direc,[root_filesFR{i}(1:end-4) '_processedmotion.mat']);
-    end
-    model = createFootModel(marker_data);
-    
-    subj_num = str2double(root_filesFR{i}(2:3));
-    subj_num_list(i) = subj_num;
-    
-    k_ = strfind( root_filesFR{i},'_');
-    k_ = [0 k_];
-    % list the subjects
-    subj_name = root_filesFR{i}(k_(1)+1:k_(2)-1);
-    
-    % check to see if it's already in the structure; if it is, then
-    % calculate the max pf length and see if it's bigger. If it is, replace
-    % the trial with the info from that one
-    
-    subj_match = findInStruct(data_structFR,'subjects',subj_name);
-    disp(num2str(max(model.elongation)))
-    if ~isempty(subj_match) % there is a match, so subject is already in the structure
-        temp_max = max(model.elongation);
-        if temp_max > data_structFR(subj_match).max_pf
-            subj_ind = subj_match;
-            disp('Replaced by:')
-            data_structFR(subj_ind).subjects = subj_name;
-            data_structFR(subj_ind).MLA      = model.MLA;%-model.MLA(impulse_ends(1));
-            data_structFR(subj_ind).length_pf= model.elongation;
-            data_structFR(subj_ind).max_pf   = max(data_structFR(subj_ind).length_pf);
-            data_structFR(subj_ind).arch_height{1}   = model.marker_data.CST;
-            
-        end
-    else % place it in a new row, given by the index count
-        subj_ind = count;
-        data_structFR(subj_ind).subjects = subj_name;
-        data_structFR(subj_ind).MLA      = model.MLA;%-model.MLA(impulse_ends(1));
-        data_structFR(subj_ind).length_pf= model.elongation;
-        data_structFR(subj_ind).max_pf   = max(data_structFR(subj_ind).length_pf);
-        data_structFR(subj_ind).arch_height{1}   = model.marker_data.CST;
-        count = count + 1;
-        
-    end
-    
-    
-    
-    
-    disp(['The trial ' root_filesFR{i}(1:end-4) ' is added to the data structure'])
-    
-    
-end
-%% Make sure that the longest pf length is taken in all the trials
-
-
-for i =  1:length(root_files)
-    
-    load([direc root_files{i}(1:end-4) '_processedmotion.mat']);
-    if ~isfield(marker_data,'ME_') || ~isfield(marker_data,'LE_') || ~isfield(marker_data,'MM_') || ~isfield(marker_data,'LM_')
-        marker_data = addMEandLEtoMarkerData(direc,[root_files{i}(1:end-4) '_processedmotion.mat']);
-    end
-    model = createFootModel(marker_data);
-    
-    subj_num = str2double(root_files{i}(2:3));
-    subj_num_list(i) = subj_num;
-    
-    k_ = strfind( root_files{i},'_');
-    k_ = [0 k_];
-    % list the subjects
-    subj_name = root_files{i}(k_(1)+1:k_(2)-1);
-    
-    % check to see if it's already in the structure; if it is, then
-    % calculate the max pf length and see if it's bigger. If it is, replace
-    % the trial with the info from that one
-    
-    subj_match = findInStruct(data_structFR,'subjects',subj_name);
-    
-    if ~isempty(subj_match) % there is a match, so subject is already in the structure
-        temp_max = max(model.elongation);
-        if temp_max > data_structFR(subj_match).max_pf
-            subj_ind = subj_match;
-            
-            data_structFR(subj_ind).subjects = subj_name;
-            data_structFR(subj_ind).MLA      = model.MLA;%-model.MLA(impulse_ends(1));
-            data_structFR(subj_ind).length_pf= model.elongation;
-            data_structFR(subj_ind).max_pf   = max(model.elongation);
-            data_structFR(subj_ind).arch_height{1}   = model.marker_data.CST;
-            disp(num2str(max(model.elongation)))
-            
-            disp(['The trial ' root_files{i}(1:end-4) ' is replacing part of the data structure'])
-        end
-        
-        
-    end
-    
-end
-
+% clear
+% clc
+% % This is the later version of EnergyCalculationMLAElongation that includes
+% % the maximum length of the PF from the full range trials April 2017
+% 
+% direc = '/home/lauren/Desktop/MotionDataAus_April2017/';
+% 
+% list_files = dir([direc '*processed*']);
+% 
+% num_files = length(list_files);
+% 
+% % --------- To reprocess all of the files -----------------------
+% ind1 = 1;
+% ind2 = 1;
+% % root_files = cell(num_files,1);
+% for i = 1:num_files
+%     subj_num = str2double(list_files(i).name(2:3));
+%     subj_str = sprintf('S%.2i',subj_num);
+%     rawdatadir = ['/media/lauren/Elements/AustraliaCollection/' subj_str '/SelectedTrials/'];
+%     
+%     
+%     raw_data_files{i} = [rawdatadir list_files(i).name(1:end-20) '.mat'];
+%     
+%     if isempty(regexp(list_files(i).name(1:end-20),'fullrange')) % normal file
+%         root_files{ind1} = [list_files(i).name(1:end-20) '.mat'];
+%         ind1 = ind1 + 1;
+%     else % full range file
+%         root_filesFR{ind2} = [list_files(i).name(1:end-20) '.mat'];
+%         ind2 = ind2 + 1;
+%     end
+%     
+%     
+%     try % basically I'm too lazy to move all the files over so if it isn't in this direcory, it's in the other one
+%         load(raw_data_files{i})
+%     catch
+%         raw_data_files{i} = ['/media/lauren/Elements/AustraliaCollection/' subj_str '/Mocap/' list_files(i).name(1:end-20) '.mat'];
+%     end
+% end
+% root_files = root_files';
+% root_filesFR = root_filesFR';
+% % MocapDataTransform(root_files,direc)
+% 
+% % MocapDataTransform(raw_data_files,direc)
+% 
+% clearvars -except root_files num_files direc root_filesFR
+% % -----------------------------------------------------------------
+% %%
+% % load the offsets
+% [subject_info,subj_head] = xlsread([direc 'Subject_list.xlsx']);
+% close all;
+% save_impulse_flag = 0;
+% data_structFR = struct('subjects','','weight',[]);
+% 
+% for i = 1:9
+%     data_structFR(i).weight = subject_info(i,1);
+% end
+% 
+% 
+% nFRfiles = length(root_filesFR);
+% 
+% 
+% count = 1; % index for the structure so there is only one row per subject
+% % the subjects will be replaced if a different trial for the same subject
+% % has a greater maximum pf length
+% 
+% 
+% % determine all the parameters for the full range trial for scaling
+% % purposes
+% for i = 1:nFRfiles
+%     load([direc root_filesFR{i}(1:end-4) '_processedmotion.mat']);
+%     if ~isfield(marker_data,'ME_') || ~isfield(marker_data,'LE_')  || ~isfield(marker_data,'MM_') || ~isfield(marker_data,'LM_')
+%         marker_data = addMEandLEtoMarkerData(direc,[root_filesFR{i}(1:end-4) '_processedmotion.mat']);
+%     end
+%     model = createFootModel(marker_data);
+%     
+%     subj_num = str2double(root_filesFR{i}(2:3));
+%     subj_num_list(i) = subj_num;
+%     
+%     k_ = strfind( root_filesFR{i},'_');
+%     k_ = [0 k_];
+%     % list the subjects
+%     subj_name = root_filesFR{i}(k_(1)+1:k_(2)-1);
+%     
+%     % check to see if it's already in the structure; if it is, then
+%     % calculate the max pf length and see if it's bigger. If it is, replace
+%     % the trial with the info from that one
+%     
+%     subj_match = findInStruct(data_structFR,'subjects',subj_name);
+%     disp(num2str(max(model.elongation)))
+%     if ~isempty(subj_match) % there is a match, so subject is already in the structure
+%         temp_max = max(model.elongation);
+%         if temp_max > data_structFR(subj_match).max_pf
+%             subj_ind = subj_match;
+%             disp('Replaced by:')
+%             data_structFR(subj_ind).subjects = subj_name;
+%             data_structFR(subj_ind).MLA      = model.MLA;%-model.MLA(impulse_ends(1));
+%             data_structFR(subj_ind).length_pf= model.elongation;
+%             data_structFR(subj_ind).max_pf   = max(data_structFR(subj_ind).length_pf);
+%             data_structFR(subj_ind).arch_height{1}   = model.marker_data.CST;
+%             
+%         end
+%     else % place it in a new row, given by the index count
+%         subj_ind = count;
+%         data_structFR(subj_ind).subjects = subj_name;
+%         data_structFR(subj_ind).MLA      = model.MLA;%-model.MLA(impulse_ends(1));
+%         data_structFR(subj_ind).length_pf= model.elongation;
+%         data_structFR(subj_ind).max_pf   = max(data_structFR(subj_ind).length_pf);
+%         data_structFR(subj_ind).arch_height{1}   = model.marker_data.CST;
+%         count = count + 1;
+%         
+%     end
+%     
+%     
+%     
+%     
+%     disp(['The trial ' root_filesFR{i}(1:end-4) ' is added to the data structure'])
+%     
+%     
+% end
+% %% Make sure that the longest pf length is taken in all the trials
+% 
+% 
+% for i =  1:length(root_files)
+%     
+%     load([direc root_files{i}(1:end-4) '_processedmotion.mat']);
+%     if ~isfield(marker_data,'ME_') || ~isfield(marker_data,'LE_') || ~isfield(marker_data,'MM_') || ~isfield(marker_data,'LM_')
+%         marker_data = addMEandLEtoMarkerData(direc,[root_files{i}(1:end-4) '_processedmotion.mat']);
+%     end
+%     model = createFootModel(marker_data);
+%     
+%     subj_num = str2double(root_files{i}(2:3));
+%     subj_num_list(i) = subj_num;
+%     
+%     k_ = strfind( root_files{i},'_');
+%     k_ = [0 k_];
+%     % list the subjects
+%     subj_name = root_files{i}(k_(1)+1:k_(2)-1);
+%     
+%     % check to see if it's already in the structure; if it is, then
+%     % calculate the max pf length and see if it's bigger. If it is, replace
+%     % the trial with the info from that one
+%     
+%     subj_match = findInStruct(data_structFR,'subjects',subj_name);
+%     
+%     if ~isempty(subj_match) % there is a match, so subject is already in the structure
+%         temp_max = max(model.elongation);
+%         if temp_max > data_structFR(subj_match).max_pf
+%             subj_ind = subj_match;
+%             
+%             data_structFR(subj_ind).subjects = subj_name;
+%             data_structFR(subj_ind).MLA      = model.MLA;%-model.MLA(impulse_ends(1));
+%             data_structFR(subj_ind).length_pf= model.elongation;
+%             data_structFR(subj_ind).max_pf   = max(model.elongation);
+%             data_structFR(subj_ind).arch_height{1}   = model.marker_data.CST;
+%             disp(num2str(max(model.elongation)))
+%             
+%             disp(['The trial ' root_files{i}(1:end-4) ' is replacing part of the data structure'])
+%         end
+%         
+%         
+%     end
+%     
+% end
+% 
 
 
 
@@ -203,7 +203,7 @@ for j =  1:length(root_files)
         force_res = raw_force(1:3,1:sample_factor:end);
         moment_res = force_data.Moment(1:3,1:sample_factor:end);
 %         Determine the centre of pressures
-        COP = force_data.COP(1:sample_factor:end); 
+        COP_temp = force_data.COP(:,1:sample_factor:end); 
 %         COPy = force_data.COP(2,1:sample_factor:end); 
 %         COPz = force_data.COP(3,1:sample_factor:end);
         % determine when the impulse occurs by the shape of the force curve
@@ -308,8 +308,8 @@ for j =  1:length(root_files)
         data_struct(i).force_val{2}     = -force_res(3,impulse_ends(3):impulse_ends(4))/data_structFR(subj_FR_ind).weight;
         
         
-        COP{1}     = COP(:,impulse_ends(1):impulse_ends(2));
-        COP{2}     = COP(:,impulse_ends(3):impulse_ends(4));
+        COP{1}     = COP_temp(:,impulse_ends(1):impulse_ends(2));
+        COP{2}     = COP_temp(:,impulse_ends(3):impulse_ends(4));
         
 %         COPy{1}     = COPy(impulse_ends(1):impulse_ends(2));
 %         COPy{2}     = COPy(impulse_ends(3):impulse_ends(4));
@@ -394,7 +394,7 @@ for j =  1:length(root_files)
                 % determine helical axis parameters
                 [rot_temp,norm_temp,~,ax_pt_temp] = helical(cal_met_pose{k}(:,:,kk));
                 %convert the helical parameters to be in global 
-                norm_glob_temp = cal_pose{k}(:,:,kk)*[norm_temp;1];
+                norm_glob_temp = cal_pose{k}(:,:,kk)*[norm_temp;0];
                 ax_pt_glob_temp = cal_pose{k}(:,:,kk)*[ax_pt_temp;1];
                 
                 helical_norm_ax = norm_glob_temp(1:3)/norm(norm_glob_temp(1:3));
@@ -413,9 +413,16 @@ for j =  1:length(root_files)
                 theta = dot_angle(-ca_cst_proj{k}(:,kk),mh1_ca_proj{k}(:,kk));
                 phi = dot_angle(-mh1_cst_proj{k}(:,kk),-mh1_ca_proj{k}(:,kk));
            %--------------- determine the moment around the helical axis
-                % start by determining
+                % start by determining the point of intersection of the
+                % force vector and the plane made by the foot
+                pN = foot_pose{k}(1:3,2,kk); % plane normal
+                D = -dot(pN,foot_pose{k}(1:3,4,kk));
+%               
+                inter_pt = COP{k}(:,kk) + force{k}(:,kk) * (dot(pN,COP{k}(:,kk)) + D) / dot(pN,-force{k}(:,kk));
+                % this is the raised COP
                 
-                
+                markerPlottingVerification
+                pause(0.1)
                 
                 
                 
