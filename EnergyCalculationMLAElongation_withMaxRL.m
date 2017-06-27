@@ -401,8 +401,9 @@ for j =  1:length(root_files)
                 % dimensional model
                 force_local_temp = inv_foot * [force_proj;0];
                 force_local{k}(:,kk) = force_local_temp(1:3)/(data_structFR(subj_FR_ind).weight*9.81); % negative to be in the right direction
-                theta = dot_angle(-ca_cst_proj{k}(:,kk),mh1_ca_proj{k}(:,kk));
-                phi = dot_angle(-mh1_cst_proj{k}(:,kk),-mh1_ca_proj{k}(:,kk));
+%                 theta = dot_angle(-ca_cst_proj{k}(:,kk),mh1_ca_proj{k}(:,kk));
+%                 phi = dot_angle(-mh1_cst_proj{k}(:,kk),-mh1_ca_proj{k}(:,kk));
+                F = force_local{k}(:,kk);% force_loc_temp(1:3);
            %--------------- determine the moment around the helical axis
                 % start by determining the point of intersection of the
                 % force vector and the plane made by the foot
@@ -412,57 +413,6 @@ for j =  1:length(root_files)
                 inter_pt = COP{k}(:,kk) + force{k}(:,kk) * (dot(pN,COP{k}(:,kk)) + D) / dot(pN,-force{k}(:,kk));
                 % this is the raised COP
                 
-                
-                
-                
-                %    --------- calculate the plantar fascia force from the model
-                %     determine lengths of truss sides and put them in the foot co-ordinate
-                %     system
-                l_mh_temp = inv_foot * [mh1_cst_proj{k}(:,kk);0];
-                l_mh = l_mh_temp(1:3);
-                
-                l_ca_temp = inv_foot * [ca_cst_proj{k}(:,kk);0];
-                l_ca = l_ca_temp(1:3);
-                
-%                 force_loc_temp =  inv_foot * [force_local{k}(:,kk);0];
-                F = force_local{k}(:,kk);% force_loc_temp(1:3);
-                
-                
-                A_ext = [1 0 0; 0 1 1; 0 0 (abs(l_mh(1))+abs(l_ca(1)))];
-                B_ext = [-F(1);-F(2) ; (-F(1)* abs(l_mh(2))-F(2)*abs(l_mh(1)))];
-                f_ext(1:3) = A_ext\B_ext;
-                
-                F_M = f_ext(1:2);
-                F_C= [0 ; f_ext(3)];
-                
-                
-                F_CA_mag = f_ext(3)/-cosd(theta);
-                F_CA = F_CA_mag * [-cosd(theta); -sind(theta)];
-                
-                F_pf = F_CA(2);
-                
-                F_MH_mag = 1/cosd(phi) *(F(1) - F_CA(1));
-                F_MH = F_MH_mag * [cosd(phi); sind(phi)];
-                
-                
-                
-                data_struct(i).force_localx{k}(:,kk) =  force_local{k}(1,kk);
-                data_struct(i).force_localy{k}(:,kk) =  force_local{k}(2,kk);
-                data_struct(i).theta{k}(kk) = theta;
-                data_struct(i).phi{k}(kk) = phi;
-                data_struct(i).F_pf{k}(kk) =  F_pf;
-                data_struct(i).F_Mx{k}(kk) =  F_M(1);
-                data_struct(i).F_My{k}(kk) =  F_M(2);
-                data_struct(i).F_C{k}(kk) =  F_C(2);
-                data_struct(i).F_CAx{k}(kk) =  F_CA(1);
-                data_struct(i).F_CAy{k}(kk) =  F_CA(2);
-                data_struct(i).F_MHx{k}(kk) =  F_MH(1);
-                data_struct(i).F_MHy{k}(kk) =  F_MH(2);
-%                 
-%                 data_struct(i).helical_norm_ax{k}(:,kk) = helical_norm_ax;
-%                 data_struct(i).helical_rot{k}(kk) = helical_rot;
-%                 data_struct(i).helical_ax_pt{k}(:,kk) =  helical_ax_pt ;
-%                       
                     % determine the helical axis relative to the first
                     % position
                 [rot_temp,norm_temp,~,ax_pt_temp] = helical(cal_met_pose{k}(:,:,kk)*invTranspose(cal_met_pose{k}(:,:,1)));
@@ -478,7 +428,7 @@ for j =  1:length(root_files)
                     data_struct(i).arch_vel{k}(1:3,kk-1) = diff(arch_height(1:3,[kk-1,kk]),1,2) * mot_fr;
                     data_struct(i).power{k}(kk-1)  = dot(F,data_struct(i).arch_vel{k}(:,kk-1)); % local force and local arch velocity (not that it matters for arch vel)
                     data_struct(i).elong_speed{k}(kk-1) = diff(lengthPF{k}([kk-1,kk])) * mot_fr;
-                    data_struct(i).elong_power{k}(kk-1) = data_struct(i).elong_speed{k}(:,kk-1) * data_struct(i).F_pf{k}(kk-1);
+%                     data_struct(i).elong_power{k}(kk-1) = data_struct(i).elong_speed{k}(:,kk-1) * data_struct(i).F_pf{k}(kk-1);
               
                 
                 data_struct(i).omega{k}(kk-1) = diff(data_struct(i).helical_rot{k}([kk-1,kk])) * mot_fr;
@@ -494,15 +444,16 @@ for j =  1:length(root_files)
 %             data_struct(i).helical_vals{k} = helical_vals;
             
             
-            data_struct(i).arch_energy{k}  = cumtrapz(data_struct(i).elongation{k},data_struct(i).F_pf{k}(1,:));
+%             data_struct(i).arch_energy{k}  = cumtrapz(data_struct(i).elongation{k},data_struct(i).F_pf{k}(1,:));
             
             data_struct(i).work{k} = cumtrapz(0:1/mot_fr:(n_pts-2)/mot_fr,data_struct(i).power{k});
             data_struct(i).work{k}(n_pts-1) = data_struct(i).work{k}(n_pts - 2); % add an extra frame for consistency
             % determine the max energy,
-            data_struct(i).energy_max{k} = max(data_struct(i).arch_energy{k});
-            data_struct(i).energy_final{k} = (data_struct(i).arch_energy{k}(end));
-            data_struct(i).energy_return{k} = data_struct(i).energy_final{k} - data_struct(i).energy_max{k};
-            data_struct(i).energy_ratio{k} = (data_struct(i).arch_energy{k}(end))/data_struct(i).energy_max{k};
+            
+%             data_struct(i).energy_max{k} = max(data_struct(i).arch_energy{k});
+%             data_struct(i).energy_final{k} = (data_struct(i).arch_energy{k}(end));
+%             data_struct(i).energy_return{k} = data_struct(i).energy_final{k} - data_struct(i).energy_max{k};
+%             data_struct(i).energy_ratio{k} = (data_struct(i).arch_energy{k}(end))/data_struct(i).energy_max{k};
             
             data_struct(i).work_max{k} = min(data_struct(i).work{k});
             data_struct(i).work_final{k} = data_struct(i).work{k}(end);
@@ -516,7 +467,7 @@ for j =  1:length(root_files)
             n_pts_mid = floor(n_pts_new/2);
             
             % take the mean of 5 data pts at the 50 % of the trial
-            data_struct(i).energy_50{k} = mean(data_struct(i).arch_energy{k}(n_pts_mid-2:n_pts_mid+2));
+%             data_struct(i).energy_50{k} = mean(data_struct(i).arch_energy{k}(n_pts_mid-2:n_pts_mid+2));
             data_struct(i).work_50{k} = mean(data_struct(i).work{k}(n_pts_mid-2:n_pts_mid+2));
             
         end
@@ -532,23 +483,23 @@ save([direc 'energy_datastruct.mat'],'data_struct')
 
 
 %%
-% 
-% for i = 1:108 % length of the data structure
-%     for k = 1:2
-%         n_pts = length(data_struct.helical_norm_ax{k});
-%         mid_pt = round(n_pts/2);
-%         hel_ax_stable = data_struct.helical_norm_ax{k}(:,mid_pt);
-%         
-%         for kk = 1:n_pts
-%             
-%             
-%             
-%         end
-%     
-%     
-%     end
-% end
-% 
-%     
-% 
-% 
+
+for i = 1:108 % length of the data structure
+    for k = 1:2
+        n_pts = length(data_struct.helical_norm_ax{k});
+        mid_pt = round(n_pts/2);
+        hel_ax_stable = data_struct.helical_norm_ax{k}(:,mid_pt);
+        
+        for kk = 1:n_pts
+            
+            
+            
+        end
+    
+    
+    end
+end
+
+    
+
+
