@@ -390,16 +390,7 @@ for j =  1:length(root_files)
                 arch_marker_foot = inv_foot * [arch_marker{k}(1:3,kk);1];
                 arch_height(1:3,kk) = arch_marker_foot(1:3); % in the y co-ordinate in the foot co-ordinate system
                 
-                
-                % determine helical axis parameters
-                [rot_temp,norm_temp,~,ax_pt_temp] = helical(cal_met_pose{k}(:,:,kk));
-                %convert the helical parameters to be in global 
-                norm_glob_temp = cal_pose{k}(:,:,kk)*[norm_temp;0];
-                ax_pt_glob_temp = cal_pose{k}(:,:,kk)*[ax_pt_temp;1];
-                
-                helical_norm_ax = norm_glob_temp(1:3)/norm(norm_glob_temp(1:3));
-                helical_rot = rot_temp;
-                helical_ax_pt = ax_pt_glob_temp(1:3);
+
                 % determine the force vector resolved in the sagittal plane of
                 % the foot - using a static model to determine the joint forces
                 proj_perp = dot(force{k}(:,kk),sagittal_plane{k}(:,kk)) * sagittal_plane{k}(:,kk); % project the vector in plane normal direcion
@@ -421,8 +412,6 @@ for j =  1:length(root_files)
                 inter_pt = COP{k}(:,kk) + force{k}(:,kk) * (dot(pN,COP{k}(:,kk)) + D) / dot(pN,-force{k}(:,kk));
                 % this is the raised COP
                 
-                markerPlottingVerification
-                pause(0.1)
                 
                 
                 
@@ -469,18 +458,33 @@ for j =  1:length(root_files)
                 data_struct(i).F_CAy{k}(kk) =  F_CA(2);
                 data_struct(i).F_MHx{k}(kk) =  F_MH(1);
                 data_struct(i).F_MHy{k}(kk) =  F_MH(2);
-                
-                data_struct(i).helical_norm_ax{k}(:,kk) = helical_norm_ax;
-                data_struct(i).helical_rot{k}(kk) = helical_rot;
-                data_struct(i).helical_ax_pt{k}(:,kk) =  helical_ax_pt ;
-                
+%                 
+%                 data_struct(i).helical_norm_ax{k}(:,kk) = helical_norm_ax;
+%                 data_struct(i).helical_rot{k}(kk) = helical_rot;
+%                 data_struct(i).helical_ax_pt{k}(:,kk) =  helical_ax_pt ;
+%                       
+                    % determine the helical axis relative to the first
+                    % position
+                [rot_temp,norm_temp,~,ax_pt_temp] = helical(cal_met_pose{k}(:,:,kk)*invTranspose(cal_met_pose{k}(:,:,1)));
+                %convert the helical parameters to be in global 
+                norm_glob_temp = (cal_pose{k}(:,:,kk))*[norm_temp;0];
+                ax_pt_glob_temp = (cal_pose{k}(:,:,kk))*[ax_pt_temp;1];
+
+                data_struct(i).helical_norm_ax{k}(:,kk) = norm_glob_temp(1:3);
+                data_struct(i).helical_rot{k}(kk) = rot_temp;
+                data_struct(i).helical_ax_pt{k}(:,kk) =  ax_pt_glob_temp(1:3);
+%                 markerPlottingVerification
                 if kk > 2 % start at the second so I don't have to make a second loop to differentiate
                     data_struct(i).arch_vel{k}(1:3,kk-1) = diff(arch_height(1:3,[kk-1,kk]),1,2) * mot_fr;
                     data_struct(i).power{k}(kk-1)  = dot(F,data_struct(i).arch_vel{k}(:,kk-1)); % local force and local arch velocity (not that it matters for arch vel)
                     data_struct(i).elong_speed{k}(kk-1) = diff(lengthPF{k}([kk-1,kk])) * mot_fr;
                     data_struct(i).elong_power{k}(kk-1) = data_struct(i).elong_speed{k}(:,kk-1) * data_struct(i).F_pf{k}(kk-1);
-                    
-                    data_struct(i).omega{k}(kk-1) = diff(data_struct(i).helical_rot{k}([kk-1,kk])) * mot_fr;
+              
+                
+                data_struct(i).omega{k}(kk-1) = diff(data_struct(i).helical_rot{k}([kk-1,kk])) * mot_fr;
+                
+%                 
+                pause(0.1)
                 end
                 
                 
@@ -527,7 +531,24 @@ end
 save([direc 'energy_datastruct.mat'],'data_struct')
 
 
-
-
-
-
+%%
+% 
+% for i = 1:108 % length of the data structure
+%     for k = 1:2
+%         n_pts = length(data_struct.helical_norm_ax{k});
+%         mid_pt = round(n_pts/2);
+%         hel_ax_stable = data_struct.helical_norm_ax{k}(:,mid_pt);
+%         
+%         for kk = 1:n_pts
+%             
+%             
+%             
+%         end
+%     
+%     
+%     end
+% end
+% 
+%     
+% 
+% 
