@@ -1,169 +1,179 @@
-% clear
-% clc
-% % This is the later version of EnergyCalculationMLAElongation that includes
-% % the maximum length of the PF from the full range trials April 2017
-% 
-% direc = '/home/lauren/Desktop/MotionDataAus_April2017/';
-% 
-% list_files = dir([direc '*processed*']);
-% 
-% num_files = length(list_files);
-% 
-% % --------- To reprocess all of the files -----------------------
-% ind1 = 1;
-% ind2 = 1;
-% % root_files = cell(num_files,1);
-% for i = 1:num_files
-%     subj_num = str2double(list_files(i).name(2:3));
-%     subj_str = sprintf('S%.2i',subj_num);
-%     rawdatadir = ['/media/lauren/Elements/AustraliaCollection/' subj_str '/SelectedTrials/'];
-% 
-% 
-%     raw_data_files{i} = [rawdatadir list_files(i).name(1:end-20) '.mat'];
-% 
-%     if isempty(regexp(list_files(i).name(1:end-20),'fullrange')) % normal file
-%         root_files{ind1} = [list_files(i).name(1:end-20) '.mat'];
-%         ind1 = ind1 + 1;
-%     else % full range file
-%         root_filesFR{ind2} = [list_files(i).name(1:end-20) '.mat'];
-%         ind2 = ind2 + 1;
-%     end
-% 
-% 
-%     try % basically I'm too lazy to move all the files over so if it isn't in this direcory, it's in the other one
-%         load(raw_data_files{i})
-%     catch
-%         raw_data_files{i} = ['/media/lauren/Elements/AustraliaCollection/' subj_str '/Mocap/' list_files(i).name(1:end-20) '.mat'];
-%     end
-% end
-% root_files = root_files';
-% root_filesFR = root_filesFR';
-% % MocapDataTransform(root_files,direc)
-% 
-% % MocapDataTransform(raw_data_files,direc)
-% 
-% clearvars -except root_files num_files direc root_filesFR
-% % -----------------------------------------------------------------
-% %%
-% % load the offsets
-% [subject_info,subj_head] = xlsread([direc 'Subject_list.xlsx']);
-% close all;
-% save_impulse_flag = 0;
-% data_structFR = struct('subjects','','weight',[]);
-% 
-% for i = 1:9
-%     data_structFR(i).weight = subject_info(i,1);
-% end
-% 
-% 
-% nFRfiles = length(root_filesFR);
-% 
-% 
-% count = 1; % index for the structure so there is only one row per subject
-% % the subjects will be replaced if a different trial for the same subject
-% % has a greater maximum pf length
-% 
-% 
-% % determine all the parameters for the full range trial for scaling
-% % purposes
-% for i = 1:nFRfiles
-%     load([direc root_filesFR{i}(1:end-4) '_processedmotion.mat']);
-%     if ~isfield(marker_data,'ME_') || ~isfield(marker_data,'LE_')  || ~isfield(marker_data,'MM_') || ~isfield(marker_data,'LM_')
-%         marker_data = addMEandLEtoMarkerData(direc,[root_filesFR{i}(1:end-4) '_processedmotion.mat']);
-%     end
-%     model = createFootModel(marker_data);
-% 
-%     subj_num = str2double(root_filesFR{i}(2:3));
-%     subj_num_list(i) = subj_num;
-% 
-%     k_ = strfind( root_filesFR{i},'_');
-%     k_ = [0 k_];
-%     % list the subjects
-%     subj_name = root_filesFR{i}(k_(1)+1:k_(2)-1);
-% 
-%     % check to see if it's already in the structure; if it is, then
-%     % calculate the max pf length and see if it's bigger. If it is, replace
-%     % the trial with the info from that one
-% 
-%     subj_match = findInStruct(data_structFR,'subjects',subj_name);
-%     disp(num2str(max(model.elongation)))
-%     if ~isempty(subj_match) % there is a match, so subject is already in the structure
-%         temp_max = max(model.elongation);
-%         if temp_max > data_structFR(subj_match).max_pf
-%             subj_ind = subj_match;
-%             disp('Replaced by:')
-%             data_structFR(subj_ind).subjects = subj_name;
-%             data_structFR(subj_ind).MLA      = model.MLA;%-model.MLA(impulse_ends(1));
-%             data_structFR(subj_ind).length_pf= model.elongation;
-%             data_structFR(subj_ind).max_pf   = max(data_structFR(subj_ind).length_pf);
-%             data_structFR(subj_ind).arch_height{1}   = model.marker_data.CST;
-% 
-%         end
-%     else % place it in a new row, given by the index count
-%         subj_ind = count;
-%         data_structFR(subj_ind).subjects = subj_name;
-%         data_structFR(subj_ind).MLA      = model.MLA;%-model.MLA(impulse_ends(1));
-%         data_structFR(subj_ind).length_pf= model.elongation;
-%         data_structFR(subj_ind).max_pf   = max(data_structFR(subj_ind).length_pf);
-%         data_structFR(subj_ind).arch_height{1}   = model.marker_data.CST;
-%         count = count + 1;
-% 
-%     end
-% 
-% 
-% 
-% 
-%     disp(['The trial ' root_filesFR{i}(1:end-4) ' is added to the data structure'])
-% 
-% 
-% end
-% %% Make sure that the longest pf length is taken in all the trials
-% 
-% 
-% for i =  1:length(root_files)
-% 
-%     load([direc root_files{i}(1:end-4) '_processedmotion.mat']);
-%     if ~isfield(marker_data,'ME_') || ~isfield(marker_data,'LE_') || ~isfield(marker_data,'MM_') || ~isfield(marker_data,'LM_')
-%         marker_data = addMEandLEtoMarkerData(direc,[root_files{i}(1:end-4) '_processedmotion.mat']);
-%     end
-%     model = createFootModel(marker_data);
-% 
-%     subj_num = str2double(root_files{i}(2:3));
-%     subj_num_list(i) = subj_num;
-% 
-%     k_ = strfind( root_files{i},'_');
-%     k_ = [0 k_];
-%     % list the subjects
-%     subj_name = root_files{i}(k_(1)+1:k_(2)-1);
-% 
-%     % check to see if it's already in the structure; if it is, then
-%     % calculate the max pf length and see if it's bigger. If it is, replace
-%     % the trial with the info from that one
-% 
-%     subj_match = findInStruct(data_structFR,'subjects',subj_name);
-% 
-%     if ~isempty(subj_match) % there is a match, so subject is already in the structure
-%         temp_max = max(model.elongation);
-%         if temp_max > data_structFR(subj_match).max_pf
-%             subj_ind = subj_match;
-% 
-%             data_structFR(subj_ind).subjects = subj_name;
-%             data_structFR(subj_ind).MLA      = model.MLA;%-model.MLA(impulse_ends(1));
-%             data_structFR(subj_ind).length_pf= model.elongation;
-%             data_structFR(subj_ind).max_pf   = max(model.elongation);
-%             data_structFR(subj_ind).arch_height{1}   = model.marker_data.CST;
-%             disp(num2str(max(model.elongation)))
-% 
-%             disp(['The trial ' root_files{i}(1:end-4) ' is replacing part of the data structure'])
-%         end
-% 
-% 
-%     end
-% 
-% end
-% 
-% 
-% 
+clear
+clc
+% This is the later version of EnergyCalculationMLAElongation that includes
+% the maximum length of the PF from the full range trials April 2017
+
+direc = '/home/lauren/Desktop/MotionDataAus_April2017/';
+
+
+
+list_files = dir([direc '*processed*']);
+
+num_files = length(list_files);
+
+
+direc = '/home/lauren/Desktop/MotionDataAus_Nov2017/';
+% --------- To reprocess all of the files -----------------------
+ind1 = 1;
+ind2 = 1;
+% root_files = cell(num_files,1);
+for i = 1:num_files
+    subj_num = str2double(list_files(i).name(2:3));
+    subj_str = sprintf('S%.2i',subj_num);
+    rawdatadir = ['/media/lauren/Elements/AustraliaCollection/' subj_str '/SelectedTrials/'];
+
+
+    raw_data_files{i} = [rawdatadir list_files(i).name(1:end-20) '.mat'];
+
+    if isempty(regexp(list_files(i).name(1:end-20),'fullrange')) % normal file
+        root_files{ind1} = [list_files(i).name(1:end-20) '.mat'];
+        ind1 = ind1 + 1;
+    else % full range file
+        root_filesFR{ind2} = [list_files(i).name(1:end-20) '.mat'];
+        ind2 = ind2 + 1;
+    end
+
+
+    try % basically I'm too lazy to move all the files over so if it isn't in this direcory, it's in the other one
+        load(raw_data_files{i})
+    catch
+        raw_data_files{i} = ['/media/lauren/Elements/AustraliaCollection/' subj_str '/Mocap/' list_files(i).name(1:end-20) '.mat'];
+    end
+end
+root_files = root_files';
+root_filesFR = root_filesFR';
+
+% MocapDataTransform(raw_data_files,direc)
+
+clearvars -except root_files num_files direc root_filesFR
+% -----------------------------------------------------------------
+%%
+
+if (exist([direc 'data_structFR.mat'],'file')) ~= 2
+    % load the offsets
+    [subject_info,subj_head] = xlsread([direc 'Subject_list.xlsx']);
+    close all;
+    save_impulse_flag = 0;
+    data_structFR = struct('subjects','','weight',[]);
+    
+    for i = 1:9
+        data_structFR(i).weight = subject_info(i,1);
+    end
+    
+    
+    nFRfiles = length(root_filesFR);
+    
+    
+    count = 1; % index for the structure so there is only one row per subject
+    % the subjects will be replaced if a different trial for the same subject
+    % has a greater maximum pf length
+    
+    
+    % determine all the parameters for the full range trial for scaling
+    % purposes
+    for i = 1:nFRfiles
+        load([direc root_filesFR{i}(1:end-4) '_processedmotion.mat']);
+        if ~isfield(marker_data,'ME_') || ~isfield(marker_data,'LE_')  || ~isfield(marker_data,'MM_') || ~isfield(marker_data,'LM_')
+            marker_data = addMEandLEtoMarkerData(direc,[root_filesFR{i}(1:end-4) '_processedmotion.mat']);
+        end
+        model = createFootModel(marker_data);
+        
+        subj_num = str2double(root_filesFR{i}(2:3));
+        subj_num_list(i) = subj_num;
+        
+        k_ = strfind( root_filesFR{i},'_');
+        k_ = [0 k_];
+        % list the subjects
+        subj_name = root_filesFR{i}(k_(1)+1:k_(2)-1);
+        
+        % check to see if it's already in the structure; if it is, then
+        % calculate the max pf length and see if it's bigger. If it is, replace
+        % the trial with the info from that one
+        
+        subj_match = findInStruct(data_structFR,'subjects',subj_name);
+        disp(num2str(max(model.elongation)))
+        if ~isempty(subj_match) % there is a match, so subject is already in the structure
+            temp_max = max(model.elongation);
+            if temp_max > data_structFR(subj_match).max_pf
+                subj_ind = subj_match;
+                disp('Replaced by:')
+                data_structFR(subj_ind).subjects = subj_name;
+                data_structFR(subj_ind).MLA      = model.MLA;%-model.MLA(impulse_ends(1));
+                data_structFR(subj_ind).length_pf= model.elongation;
+                data_structFR(subj_ind).max_pf   = max(data_structFR(subj_ind).length_pf);
+                data_structFR(subj_ind).arch_height{1}   = model.marker_data.CST;
+                
+            end
+        else % place it in a new row, given by the index count
+            subj_ind = count;
+            data_structFR(subj_ind).subjects = subj_name;
+            data_structFR(subj_ind).MLA      = model.MLA;%-model.MLA(impulse_ends(1));
+            data_structFR(subj_ind).length_pf= model.elongation;
+            data_structFR(subj_ind).max_pf   = max(data_structFR(subj_ind).length_pf);
+            data_structFR(subj_ind).arch_height{1}   = model.marker_data.CST;
+            count = count + 1;
+            
+        end
+        
+        
+        
+        
+        disp(['The trial ' root_filesFR{i}(1:end-4) ' is added to the data structure'])
+        
+        
+    end
+    %--------- Make sure that the longest pf length is taken in all the
+    %trials---------------
+    
+    % if the saved subj specific structure is not saved, recalculate parameters
+    
+    for i =  1:length(root_files)
+        
+        load([direc root_files{i}(1:end-4) '_processedmotion.mat']);
+        if ~isfield(marker_data,'ME_') || ~isfield(marker_data,'LE_') || ~isfield(marker_data,'MM_') || ~isfield(marker_data,'LM_')
+            marker_data = addMEandLEtoMarkerData(direc,[root_files{i}(1:end-4) '_processedmotion.mat']);
+        end
+        model = createFootModel(marker_data);
+        
+        subj_num = str2double(root_files{i}(2:3));
+        subj_num_list(i) = subj_num;
+        
+        k_ = strfind( root_files{i},'_');
+        k_ = [0 k_];
+        % list the subjects
+        subj_name = root_files{i}(k_(1)+1:k_(2)-1);
+        
+        % check to see if it's already in the structure; if it is, then
+        % calculate the max pf length and see if it's bigger. If it is, replace
+        % the trial with the info from that one
+        
+        subj_match = findInStruct(data_structFR,'subjects',subj_name);
+        
+        if ~isempty(subj_match) % there is a match, so subject is already in the structure
+            temp_max = max(model.elongation);
+            if temp_max > data_structFR(subj_match).max_pf
+                subj_ind = subj_match;
+                
+                data_structFR(subj_ind).subjects = subj_name;
+                data_structFR(subj_ind).MLA      = model.MLA;%-model.MLA(impulse_ends(1));
+                data_structFR(subj_ind).length_pf= model.elongation;
+                data_structFR(subj_ind).max_pf   = max(model.elongation);
+                data_structFR(subj_ind).arch_height{1}   = model.marker_data.CST;
+                disp(num2str(max(model.elongation)))
+                
+                disp(['The trial ' root_files{i}(1:end-4) ' is replacing part of the data structure'])
+            end
+            
+            
+        end
+        
+    end
+    save([direc 'data_structFR.mat'],'data_structFR')
+else
+    load([direc 'data_structFR.mat'])
+end
+
+
 
 
 
@@ -171,6 +181,9 @@
 % then compute all parameters needed for analysis
 clearvars -except root_files data_structFR direc subject_info save_impulse_flag
 i = 1;
+
+%get the neutral toe angle for each subject
+load('/home/lauren/Desktop/MotionDataAus_April2017/neut_toe_angles.mat')
 for j =  1:length(root_files)
     if isempty(regexp(root_files{j},'statcal'))
         load([direc root_files{j}(1:end-4) '_processedmotion.mat']);
@@ -299,16 +312,24 @@ for j =  1:length(root_files)
         
         model = createFootModel(marker_data);
         
-        force{1}         = force_res(1:3,impulse_ends(1):impulse_ends(2));
-        force{2}         = force_res(1:3,impulse_ends(3):impulse_ends(4));
-        data_struct(i).force{1} = force{1}/(data_structFR(subj_FR_ind).weight*9.81);
-        data_struct(i).force{2} = force{2}/(data_structFR(subj_FR_ind).weight*9.81);
+        force{1}         = force_res(1:3,impulse_ends(1):impulse_ends(2))/(data_structFR(subj_FR_ind).weight);
+        force{2}         = force_res(1:3,impulse_ends(3):impulse_ends(4))/(data_structFR(subj_FR_ind).weight);
+        data_struct(i).force{1} = force{1}/(9.81);
+        data_struct(i).force{2} = force{2}/(9.81);
         
-        data_struct(i).force_val{1}     = -force_res(3,impulse_ends(1):impulse_ends(2))/data_structFR(subj_FR_ind).weight;
-        data_struct(i).force_val{2}     = -force_res(3,impulse_ends(3):impulse_ends(4))/data_structFR(subj_FR_ind).weight;
+        data_struct(i).force_val{1}     = force_res(1:3,impulse_ends(1):impulse_ends(2))/data_structFR(subj_FR_ind).weight/9.81;
+        data_struct(i).force_val{2}     = force_res(1:3,impulse_ends(3):impulse_ends(4))/data_structFR(subj_FR_ind).weight/9.81;
+        
+        for force_ind = 1:length(data_struct(i).force_val{1})
+            data_struct(i).force_val{1}(:,force_ind) = norm(data_struct(i).force_val{1}(:,force_ind));
+        end
+        for force_ind = 1:length(data_struct(i).force_val{2})
+            data_struct(i).force_val{2}(:,force_ind) = norm(data_struct(i).force_val{2}(:,force_ind));
+        end
+        
         
         for cop_ind = 1:3
-        COP{1}(cop_ind,:) = LowPassButterworth(COP_temp(cop_ind,impulse_ends(1):impulse_ends(2)),4,10,mot_fr);
+        COP{1}(cop_ind,:)     = LowPassButterworth(COP_temp(cop_ind,impulse_ends(1):impulse_ends(2)),4,10,mot_fr);
         COP{2}(cop_ind,:)     = LowPassButterworth(COP_temp(cop_ind,impulse_ends(3):impulse_ends(4)),4,10,mot_fr);
         end
         %         COPy{1}     = COPy(impulse_ends(1):impulse_ends(2));
@@ -321,8 +342,16 @@ for j =  1:length(root_files)
         data_struct(i).MLA{1}           = model.MLA(impulse_ends(1):impulse_ends(2))-model.MLA(impulse_ends(1));
         data_struct(i).MLA{2}           = model.MLA(impulse_ends(3):impulse_ends(4))-model.MLA(impulse_ends(3));
         
-        data_struct(i).length_pf{1}    = model.elongation(impulse_ends(1):impulse_ends(2));
-        data_struct(i).length_pf{2}    = model.elongation(impulse_ends(3):impulse_ends(4));
+        
+        data_struct(i).F2Ps{1}           = model.F2Ps(impulse_ends(1):impulse_ends(2))-neut_norm_vals(subj_num-2);
+        data_struct(i).F2Ps{2}           = model.F2Ps(impulse_ends(3):impulse_ends(4))-neut_norm_vals(subj_num-2);
+        
+        data_struct(i).F2Ps_ROM{1}           = model.F2Ps(impulse_ends(1):impulse_ends(2))-model.F2Ps(impulse_ends(1));
+        data_struct(i).F2Ps_ROM{2}           = model.F2Ps(impulse_ends(3):impulse_ends(4))-model.F2Ps(impulse_ends(3));
+        
+        
+        data_struct(i).length_pf{1}    = model.elongation(impulse_ends(1):impulse_ends(2))-model.elongation(impulse_ends(1));
+        data_struct(i).length_pf{2}    = model.elongation(impulse_ends(3):impulse_ends(4))-model.elongation(impulse_ends(3));
         
         data_struct(i).elongation{1}    = model.elongation(impulse_ends(1):impulse_ends(2))/max_pf;% -  repmat(model.elongation(impulse_ends(1)),1,n1);
         data_struct(i).elongation{2}    = model.elongation(impulse_ends(3):impulse_ends(4))/max_pf;% -  repmat(model.elongation(impulse_ends(3)),1,n2);
@@ -381,7 +410,7 @@ for j =  1:length(root_files)
                 % determine the arch height in the foot co-ordinate system
                 arch_marker_foot = inv_foot * [arch_marker{k}(1:3,kk);1];
                 arch_height(1:3,kk) = arch_marker_foot(1:3); % in the y co-ordinate in the foot co-ordinate system
-                
+                arch_med_lat(1,kk) = sqrt(arch_marker{k}(1,kk)^2 + arch_marker{k}(2,kk)^2);
                 
                 % determine the force vector resolved in the sagittal plane of
                 % the foot - using a static model to determine the joint forces
@@ -396,39 +425,24 @@ for j =  1:length(root_files)
                 %                 theta = dot_angle(-ca_cst_proj{k}(:,kk),mh1_ca_proj{k}(:,kk));
                 %                 phi = dot_angle(-mh1_cst_proj{k}(:,kk),-mh1_ca_proj{k}(:,kk));
                 F = force_local{k}(:,kk);% force_loc_temp(1:3);
+                
                 %--------------- determine the moment around the helical axis
                 % start by determining the point of intersection of the
                 % force vector and the plane made by the foot
                 pN = foot_pose{k}(1:3,2,kk); % plane normal
                 D = -dot(pN,foot_pose{k}(1:3,4,kk));
-                %                 %
-                                inter_pt_temp = COP{k}(:,kk) + force{k}(:,kk) * (dot(pN,COP{k}(:,kk)) + D) / dot(pN,-force{k}(:,kk));
-                %                 if kk == 1
-                %                     inter_pt_save = inter_pt;
-                %                 end
-                % move the COP up to the same plane as the foot by adding the z
-                % co-ordinate
-                
+                inter_pt_temp = COP{k}(:,kk) + force{k}(:,kk) * (dot(pN,COP{k}(:,kk)) + D) / dot(pN,-force{k}(:,kk));
+   
                 inter_pt = COP{k}(1:3,kk);
                 inter_pt(3) = (-pN(1)*inter_pt(1) -pN(2) * inter_pt(2) -D)/pN(3); % z intersection with the plane
 %                 inter_pt(3) = inter_pt(3) + inter_pt_temp(3);
                 data_struct(i).inter_pt{k}(:,kk) = inter_pt;
                 
-               
-                %                 if sum(abs(inter_pt - inter_pt_save)) > 10 % threshold for catching off points
-%                     data_struct(i).inter_pt{k}(:,kk) = [NaN;NaN;NaN];
-%                     start_nan_flag = 1; % if this is still flagged after the loop is complete then NaN values are at the end of the trial
-%                     inter_pt_save = inter_pt; % last data value
-%                 else
-%                     start_nan_flag = 0; % 
-%                     data_struct(i).inter_pt{k}(:,kk) = inter_pt;
-%                     inter_pt_save = inter_pt; % last save point with appropriate data value
-%                 end
-                % this is the raised COP
+              
                 
                 % determine the helical axis relative to the first
                 % position
-                [rot_temp,norm_temp,~,ax_pt_temp] = helical(cal_met_pose{k}(:,:,kk)*invTranspose(cal_met_pose{k}(:,:,1)));
+                [rot_temp,norm_temp,L_temp,ax_pt_temp] = helical(cal_met_pose{k}(:,:,kk)*invTranspose(cal_met_pose{k}(:,:,1)));
                 %convert the helical parameters to be in global
                 norm_glob_temp = (cal_pose{k}(:,:,kk))*[norm_temp;0];
                 ax_pt_glob_temp = (cal_pose{k}(:,:,kk))*[ax_pt_temp;1];
@@ -437,97 +451,115 @@ for j =  1:length(root_files)
                 data_struct(i).helical_rot{k}(kk) = rot_temp;
                 data_struct(i).helical_ax_pt{k}(:,kk) =  ax_pt_glob_temp(1:3);
                 data_struct(i).helical_ax_local{k}(:,kk) = norm_temp;
+                data_struct(i).helical_pt_local{k}(:,kk) = ax_pt_temp;
+                data_struct(i).helical_trans{k}(:,kk) = L_temp;
                 
+                
+%                   arch_mark_global_norm(kk) = norm(arch_marker{k}(:,kk)-arch_marker{k}(:,1)); 
                 if kk > 2 % start at the second so I don't have to make a second loop to differentiate
-                    data_struct(i).arch_vel{k}(1:3,kk-1) = diff(arch_marker{k}(1:3,[kk-1,kk]),1,2) * mot_fr;
-                    data_struct(i).force_power{k}(kk-1)  = force{k}(3,kk) * data_struct(i).arch_vel{k}(3,kk-1); % local force and local arch velocity (not that it matters for arch vel)
-                    data_struct(i).elong_speed{k}(kk-1) = diff(lengthPF{k}([kk-1,kk])) * mot_fr;
-                
-                    data_struct(i).omega{k}(kk-1) = diff(data_struct(i).helical_rot{k}([kk-1,kk])) * mot_fr;
+                    data_struct(i).arch_vel{k}(1,kk-1) = diff(arch_marker{k}(3,[kk-1,kk]),1,2) * mot_fr/1000;
+                    data_struct(i).force_power{k}(kk-1)  = force{k}(3,kk) * data_struct(i).arch_vel{k}(1,kk-1);%dot(force{k}(1:3,kk), data_struct(i).arch_vel{k}(1:3,kk-1)); % 
+%                     data_struct(i).force_local_power{k}(kk-1) = dot(F,data_struct(i).arch_vel{k}(1:3,kk-1));
                     
+                    data_struct(i).elong_speed{k}(kk-1) = diff(lengthPF{k}([kk-1,kk])) * mot_fr;
+                    data_struct(i).force_local_elong_power{k}(kk-1) = norm(F) *data_struct(i).elong_speed{k}(kk-1);
+                    
+                    data_struct(i).omega{k}(kk-1) = diff(data_struct(i).helical_rot{k}([kk-1,kk])) * mot_fr;
+                  
                 end
 %                 markerPlottingVerification
             end
-%             for pt_inds = 1:3 % replace all the NaN's with interpolated data
-%                 bd=isnan(data_struct(i).inter_pt{k}(pt_inds,:));
-%                 gd=find(~bd);
-%                 max_gd = (max(gd)+1);
-%                 bd([1:(min(gd)-1) max_gd:end])=0;
-%                 data_struct(i).inter_pt{k}(pt_inds,bd)=interp1(gd,data_struct(i).inter_pt{k}(pt_inds,gd),find(bd),'pchip');
-%                 if start_nan_flag == 1 % means the end of the trial is NaNs, fill with
-%                 end
+
             
             n_pts_new = kk;
             n_pts_mid = floor(n_pts_new/2);
             
             % take the helical axis at the mid point of the trial
             hel_ax_stable = mean(data_struct(i).helical_norm_ax{k}(:,n_pts_mid-2:n_pts_mid+2),2);
-            hel_ax_std = std(data_struct(i).helical_norm_ax{k}(:,n_pts_mid-2:n_pts_mid+2),0,2);
-            if sum(hel_ax_std) > 0.01
-                fprintf('Standard deviation is high for axis trial %s %s %s impulse %i -> %0.2f \n',data_struct(i).subjects,data_struct(i).trials,data_struct(i).conditions,k,sum(hel_ax_std))
-            end
-            hel_pt_stable = mean(data_struct(i).helical_ax_pt{k}(:,n_pts_mid-2:n_pts_mid+2));
-             hel_pt_std = std(data_struct(i).helical_ax_pt{k}(:,n_pts_mid-2:n_pts_mid+2),0,2);
-            if sum(hel_pt_std) > 6
-                fprintf('Standard deviation is high for axial point trial %s %s %s impulse %i -> %0.2f \n',data_struct(i).subjects,data_struct(i).trials,data_struct(i).conditions,k,sum(hel_pt_std))
-            end
+            
+%             hel_ax_stable = mean(data_struct(i).helical_ax_local{k}(:,n_pts_mid-2:n_pts_mid+2),2);
+            
+%             hel_ax_std = std(data_struct(i).helical_norm_ax{k}(:,n_pts_mid-2:n_pts_mid+2),0,2);
+%             if sum(hel_ax_std) > 0.01
+%                 fprintf('Standard deviation is high for axis trial %s %s %s impulse %i -> %0.2f \n',data_struct(i).subjects,data_struct(i).trials,data_struct(i).conditions,k,sum(hel_ax_std))
+%             end
+            hel_pt_stable = mean(data_struct(i).helical_ax_pt{k}(:,n_pts_mid-2:n_pts_mid+2),2);
+%              hel_pt_std = std(data_struct(i).helical_ax_pt{k}(:,n_pts_mid-2:n_pts_mid+2),0,2);
+%             if sum(hel_pt_std) > 6
+%                 fprintf('Standard deviation is high for axial point trial %s %s %s impulse %i -> %0.2f \n',data_struct(i).subjects,data_struct(i).trials,data_struct(i).conditions,k,sum(hel_pt_std))
+%             end
             data_struct(i).hel_ax_stable{k} = hel_ax_stable;
             data_struct(i).hel_pt_stable{k} = hel_pt_stable;
+           
             
-            
-            moment_save = [];
-            moment_power = [];
-            moment_arm_save = [];
-            moment_norm = [];
-            for kk = 2:n_pts-1
-                pt_q = data_struct(i).helical_ax_pt{k}(:,kk);
-                pt_p = data_struct(i).inter_pt{k}(:,kk);
-                
-                pq = pt_p - pt_q;
-                helical_proj = dot(pq,hel_ax_stable) * hel_ax_stable;
-                
-                moment_arm = pq - helical_proj; % gives the perpendicular distance from the COP intersection with the plane and the helical axis
-                
-                % moment about the helical axis resulting
-                M = cross(moment_arm/1000,-[0;0;force{k}(3,kk)]);
-%                 if kk == 75
-%                     markerPlottingVerification
-%                     pause(0.1)
-%                 end
-                moment_power(kk-1) = dot(M,data_struct(i).omega{k}(kk)*hel_ax_stable);
-                moment_save(:,kk-1) = (M);
-                moment_norm(:,kk-1) = norm(M);
-                moment_arm_save(:,kk-1) = moment_arm; 
-            end
-            data_struct(i).moment_power{k} = moment_power;
-            data_struct(i).moment{k} = moment_save;
-            data_struct(i).moment_arm{k} = moment_arm_save;
-            data_struct(i).moment_norm{k} = moment_norm;
-            data_struct(i).arch_height{k} = arch_height(2,:);% in the local co-ordinate system it's in the y direction for height
-            clearvars('arch_height')
-            
-            data_struct(i).work{k} = cumtrapz(0:1/mot_fr:(n_pts-3)/mot_fr,data_struct(i).moment_power{k});
-            data_struct(i).work{k}(n_pts-1) = data_struct(i).work{k}(n_pts - 3); % add an extra frame for consistency
+%             
+%             moment_save = [];
+%             moment_power = [];
+%             moment_arm_save = [];
+%             moment_norm = [];
+%             for kk = 2:n_pts-1
+%                 pt_q = data_struct(i).helical_ax_pt{k}(:,kk);
+%                 pt_p = data_struct(i).inter_pt{k}(:,kk);
+%                 
+%                 pq = pt_p - pt_q;
+%                 helical_proj = dot(pq,hel_ax_stable) * hel_ax_stable;
+%                 
+%                 moment_arm = pq - helical_proj; % gives the perpendicular distance from the COP intersection with the plane and the helical axis
+%                 
+%                 % moment about the helical axis resulting
+%                 M = cross(moment_arm/1000,-[0;0;force{k}(3,kk)]);
+% %                 if kk == 75
+% %                     markerPlottingVerification
+% %                     pause(0.1)
+% %                 end
+%                 moment_power(kk-1) = dot(M,data_struct(i).omega{k}(kk)*hel_ax_stable);
+%                 moment_save(:,kk-1) = (M);
+%                 moment_norm(:,kk-1) = norm(M);
+%                 moment_arm_save(:,kk-1) = moment_arm; 
+%             end
+%             data_struct(i).moment_power{k} = moment_power;
+%             data_struct(i).moment{k} = moment_save;
+%             data_struct(i).moment_arm{k} = moment_arm_save;
+%             data_struct(i).moment_norm{k} = moment_norm;
 
-            data_struct(i).work_max{k} = min(data_struct(i).work{k});
+            data_struct(i).arch_height{k} = arch_height(2,:)-arch_height(2,1);% in the local co-ordinate system it's in the y direction for height
+            data_struct(i).min_arch_height{k} = min(data_struct(i).arch_height{k});
+           
+            
+            data_struct(i).toe_mid{k} = mean(data_struct(i).F2Ps{k}(1:5));
+            data_struct(i).ROMtoe{k} = max(data_struct(i).F2Ps{k});
+            data_struct(i).work{k} = cumtrapz(0:1/mot_fr:(n_pts-2)/mot_fr,data_struct(i).force_power{k});
+            data_struct(i).work{k}(n_pts-1) = data_struct(i).work{k}(n_pts - 2); % add an extra frame for consistency
+
+            data_struct(i).work_max{k} = abs(min(data_struct(i).work{k}) - max(data_struct(i).work{k}));
             data_struct(i).work_final{k} = data_struct(i).work{k}(end);
-            data_struct(i).work_return{k} = data_struct(i).work_final{k} - data_struct(i).work_max{k};
-            data_struct(i).work_ratio{k} = data_struct(i).work_final{k}/data_struct(i).work_max{k};
+            data_struct(i).work_return{k} = data_struct(i).work_max{k}-data_struct(i).work_final{k};
+            data_struct(i).work_ratio{k} = (data_struct(i).work_max{k}-data_struct(i).work_final{k})/data_struct(i).work_max{k};
             
             data_struct(i).mla_max{k} = max(data_struct(i).MLA{k});
-            data_struct(i).length_max{k} = max(data_struct(i).length_pf{k});
+            data_struct(i).ROM_phi{k} = abs(max(data_struct(i).helical_rot{k})-min(data_struct(i).helical_rot{k}));
+            data_struct(i).ROM_elong{k} = abs(max(data_struct(i).elongation{k})-min(data_struct(i).elongation{k}));
+            data_struct(i).max_elong{k} = max(data_struct(i).elongation{k});
+            
+            data_struct(i).ROM_arch{k} = abs(max(data_struct(i).arch_height{k})-min(data_struct(i).arch_height{k}));
+            data_struct(i).mid_trans{k} = data_struct(i).helical_trans{k}(1,n_pts_mid);
+            data_struct(i).ROM_medlatarch{k} = abs(max(arch_med_lat) - min(arch_med_lat));
+            
+            clearvars('arch_height','arch_med_lat')
             
             
-            data_struct(i).work_force{k} = cumtrapz(0:1/mot_fr:(n_pts-2)/mot_fr,data_struct(i).force_power{k});
+            
+%             data_struct(i).work_force{k} = cumtrapz(0:1/mot_fr:(n_pts-2)/mot_fr,data_struct(i).force_local_elong_power{k});
 %             data_struct(i).work_force{k}(n_pts-1) = data_struct(i).work{k}(n_pts - 2); %
             % take the mean of 5 data pts at the 50 % of the trial
             %             data_struct(i).energy_50{k} = mean(data_struct(i).arch_energy{k}(n_pts_mid-2:n_pts_mid+2));
-            data_struct(i).work_50{k} = mean(data_struct(i).work{k}(n_pts_mid-2:n_pts_mid+2));
+%             data_struct(i).work_50{k} = mean(data_struct(i).work{k}(n_pts_mid-2:n_pts_mid+2));
             
             
             
         end
         data_struct(i).COP = COP;
+        data_struct(i).cal_pose = cal_pose;
         clearvars('COP')
         disp(['The trial ' root_files{j}(1:end-4) ' is added to the data structure'])
         
