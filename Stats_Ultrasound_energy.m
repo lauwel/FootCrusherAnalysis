@@ -26,11 +26,13 @@
 % 
 
 %% determine the two way anova repeated measures indices and structure
+clear
+clc
 % clearvars -except data_struct
 c = colormap(parula(16));
 set(gca,'ColorOrder',c)
 c = get(gca,'ColorOrder');
-load('/home/lauren/Desktop/MotionDataAus_April2017/energy_datastruct.mat')
+load('/home/lauren/Desktop/MotionDataAus_Nov2017/energy_datastruct.mat')
 close all
 clearvars('anovaS','f1','f2','sub')
 ind = 0;
@@ -59,7 +61,7 @@ for i = 1:108
         anovaS.midtrans(ind) = data_struct(i).mid_trans{k};
         anovaS.medlatarch(ind) = data_struct(i).ROM_medlatarch{k} ;
         
-%         pca_array(i,:) = data_struct(i).helical_ax_local{k}(:,mid_pt_d45);
+        pcaS.hel_ax_local(ind,:) = mean(data_struct(i).helical_ax_local{k}(:,mid_pt-2:mid_pt+2),2);
         pcaS.hel_ax_orient(ind,:) = data_struct(i).hel_ax_stable{k}';
         % make arrays with 1's where the condition is met in that row
         % all 1x108
@@ -77,7 +79,7 @@ end
 
 condtoe =  cond_d45 | cond_p45 ;%| cond_neut; %logical array with either of these conditions
 condspeed = cond_slow | cond_fast ;%
-condweight = cond_light | cond_heavy;
+condweight = cond_heavy ;
 
 trial_ind = condtoe & condspeed & condweight;
 
@@ -278,8 +280,9 @@ end
 %% run pca on helical axes
 
 % run pca on the helical axis for the trials indicated
-pca_array = pcaS.hel_ax_orient(trial_ind,:);
 
+pca_array = pcaS.hel_ax_orient(trial_ind,:); % global
+% pca_array = pcaS.hel_ax_local(trial_ind,:); % local
 [coeff,score,latent,tsquared,explained,~] = pca(pca_array);
 
 disp('Explained variance')
@@ -289,8 +292,8 @@ explained
 % plot levels of the wave
 
     % toe cond
-v1 = [toeDF; toeDS];
-v2 = [toePF; toePS];
+v1 = [toeDF toeDS];
+v2 = [toePF toePS];
 %     % speed
 % v1 = [toeDF; toePF];
 % v2 = [toeDS; toePS];
@@ -299,7 +302,7 @@ comp = 2; % which component
 
 
 sc = [-2,-1,0,1,2]';
-mu = mean(pca_array([v1 v2],:));
+mu = mean(pca_array([v1, v2],:));
 muv1 = (pca_array([v1],:));
 muv2 = (pca_array([v2],:));
 
@@ -325,7 +328,7 @@ muv2_sag = [muv2(i,1),0,muv2(i,3)];
 sag_ang(i) = acosd(dot(muv1_sag,muv2_sag)/(norm(muv1_sag)*norm(muv2_sag)));
 fro_ang(i) = acosd(dot(muv1_fro,muv2_fro)/(norm(muv1_fro)*norm(muv2_fro)));
 trans_ang(i) = acosd(dot(muv1_tra,muv2_tra)/(norm(muv1_tra)*norm(muv2_tra)));
-fprintf('sag = %0.2f, fro = %0.2f, trans = %0.2f \n',sag_ang(i),fro_ang(i),trans_ang(i))
+% fprintf('sag = %0.2f, fro = %0.2f, trans = %0.2f \n',sag_ang(i),fro_ang(i),trans_ang(i))
 
 % plot each angle view
 % subplot(1,3,1)
@@ -356,28 +359,35 @@ end
 fprintf('sagittal %0.2f +- %0.2f \n',mean(sag_ang),std(sag_ang))
 fprintf('frontal %0.2f +- %0.2f \n',mean(fro_ang),std(fro_ang))
 fprintf('transverse %0.2f +- %0.2f \n',mean(trans_ang),std(trans_ang))
-figure;
-h = plotvector3([0 0 0],muv1,'k');
-hold on
-h = plotvector3([0 0 0],muv2,'r');
-
-figure;
-for t = 1:5
-% t = 1; % which level of std
+% figure;
+% h = plotvector3([0 0 0],muv1,'k');
+% hold on
+% h = plotvector3([0 0 0],muv2,'r');
 
 
-score_lvl = score([v1; v2],comp) + sc(t) * std(score([v1; v2],comp));
-overall_wave = score_lvl*coeff(:,comp)'+repmat(mu,size([v1; v2],1),1);
-hold all
-
-% note : using the global axes these are the orientations
-xlabel('X (anterior - posterior)')
-ylabel('Y (medial - lateral)');
-zlabel('Z (prox- distal)')
-
-h = plotvector3([0 0 0],mean(overall_wave(:,:)),[1-t*0.15 1-t*0.15 1]);
+for comp = 1:2
+    figure;
+    for t = 1:5
+        % t = 1; % which level of std
+        
+        
+        score_lvl = score([v1; v2],comp) + sc(t) * std(score([v1; v2],comp));
+        overall_wave = score_lvl*coeff(:,comp)'+repmat(mu,size([v1; v2],1),1);
+        hold all
+        
+        % note : using the global axes these are the orientations
+        xlabel('X (anterior - posterior)')
+        ylabel('Y (medial - lateral)');
+        zlabel('Z (prox- distal)')
+        
+        h = plotvector3([0 0 0],mean(overall_wave(:,:)),[1-t*0.15 1-t*0.15 1]);
+    end
+    
+    axis equal
 end
-axis equal
+
+[h,p] = ttest2(score(v1,:),score(v2,:));
+fprintf('P45 - d45 %1.6f \n',p)
 %%
 c = [c;c];
 high_var = find(tsquared>10);
